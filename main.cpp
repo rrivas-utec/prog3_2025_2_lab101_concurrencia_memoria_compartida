@@ -1,8 +1,12 @@
 #include <iostream>
-#include <thread>
-#include <mutex>
 #include <vector>
-#include <atomic>
+
+#include <thread>   // std::thread, std::jthread
+#include <mutex>    // std::mutex
+#include <atomic>   // std::atomic
+#include <future>   // std::promise & std::future , std::async
+#include <condition_variable> // variables condicionada
+
 using namespace std;
 
 // Variable Global
@@ -31,6 +35,7 @@ void ejercicio_1() {
     thread t2;
     thread t3;
 
+    // fork
     t1 = thread(fun_1);
     t2 = thread(fun_2);
     t3 = thread(fun_3);
@@ -39,6 +44,7 @@ void ejercicio_1() {
     std::cout << "Hello, World!" << std::endl;
     m.unlock();
 
+    // join
     t1.join();
     t2.join();
     t3.join();
@@ -73,11 +79,52 @@ void ejercicio_3() {
 
 void fun_incrementar(int& valor, int incremento) {
     valor += incremento;
+}
 
-}void fun_incrementar_concurrent(int& valor, int incremento) {
+
+void fun_incrementar_concurrent(int& valor, int incremento) {
     lock_guard<mutex> lock(m);
     valor += incremento;
-}
+    // ... instrucciones
+} // m.unlock
+
+template <typename T>
+class Guardia_Bloqueo {
+    T& m_;
+public:
+    Guardia_Bloqueo(T& m) : m_(m) { m_.lock(); }
+    ~Guardia_Bloqueo() { m_.unlock(); }
+};
+
+void fun_incrementar_concurrent_GB(int& valor, int incremento) {
+    Guardia_Bloqueo<mutex> lock(m); // m.lock();
+    valor += incremento;
+} // m.unlock();
+
+void fun_incrementar_concurrent_unique_lock(int& valor, int incremento) {
+    unique_lock<mutex> lock(m);
+    valor += incremento;
+    lock.unlock();
+    // ... instrucciones
+}  // m.unlock()
+
+template <typename T>
+class Bloqueo_Unico {
+    T& m_;
+public:
+    Bloqueo_Unico(T& m) : m_(m) { m_.lock(); }
+    ~Bloqueo_Unico() { m_.unlock(); }
+
+    void unlock() { m_.unlock(); }
+};
+
+void fun_incrementar_concurrent_unique_lock(int& valor, int incremento) {
+    Bloqueo_Unico<mutex> lock(m);
+    valor += incremento;
+    lock.unlock();
+    // ... instrucciones
+}  // m.unlock()
+
 
 void ejercicio_4() {
     constexpr int n = 1000;
